@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Why AI Agents Go Stale — RAG Interactive Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a14;
+    min-height: 100vh;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 60px 24px; }
+  .container--narrow { max-width: 800px; }
+  .hidden { display: none !important; }
+
+  /* ── Tag / pill ── */
+  .tag {
+    display: inline-block;
+    padding: 6px 16px;
+    background: linear-gradient(135deg, #6366f122, #d946ef22);
+    border: 1px solid #6366f144;
+    border-radius: 100px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: #a78bfa;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .tag--small {
+    padding: 5px 14px;
+    background: #6366f115;
+    border-color: #6366f133;
+    color: #818cf8;
+    margin: 0;
+  }
+
+  /* ── Typography ── */
+  .hero-title {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 20px;
+    background: linear-gradient(135deg, #e2e8f0, #a78bfa, #d946ef);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: 'Space Mono', monospace;
+  }
+  .subtitle {
+    font-size: 18px;
+    color: #94a3b8;
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.7;
+  }
+  .subtitle .hl { color: #a78bfa; font-weight: 600; }
+  .section-title {
+    font-size: 28px;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    margin: 0 0 8px;
+    background: linear-gradient(135deg, #a78bfa, #d946ef);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .section-sub { color: #64748b; margin: 0 0 24px; font-size: 15px; }
+  .label {
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+  }
+  .label--sm { font-size: 13px; }
+
+  /* ── Cards ── */
+  .card {
+    background: #12121e;
+    border-radius: 20px;
+    padding: 32px;
+    border: 1px solid #1e1e2e;
+    margin-bottom: 32px;
+  }
+  .card--tight { border-radius: 16px; padding: 24px; margin-bottom: 16px; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 16px 32px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, border-color 0.2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn--primary {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    box-shadow: 0 4px 24px #6366f144;
+  }
+  .btn--primary:hover { box-shadow: 0 8px 32px #6366f166; }
+  .btn--outline {
+    background: transparent;
+    color: #a78bfa;
+    border: 2px solid #6366f144;
+  }
+  .btn--outline:hover { border-color: #6366f1; background: #6366f111; }
+  .btn--green {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    box-shadow: 0 4px 20px #10b98133;
+    width: 100%;
+    margin-top: 16px;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 12px;
+  }
+  .btn--green:hover { transform: translateY(-1px); }
+  .btn--reveal {
+    background: #1e1e2e;
+    color: #a78bfa;
+    border: 2px solid #6366f133;
+    width: 100%;
+    margin-top: 16px;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 12px;
+  }
+  .btn--back {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 0;
+  }
+  .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+  /* ── Question grid ── */
+  .q-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .q-card {
+    padding: 16px;
+    background: #12121e;
+    border: 2px solid #1e1e2e;
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.3s ease;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .q-card:hover { border-color: #333; }
+  .q-card.active { background: #1e1e2e; }
+  .q-card__cat {
+    font-size: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .q-card__text {
+    color: #e2e8f0;
+    font-size: 14px;
+    margin: 8px 0 0;
+    line-height: 1.4;
+    font-weight: 500;
+  }
+
+  /* ── Agent response cards ── */
+  .agent-card {
+    background: #12121e;
+    border-radius: 16px;
+    padding: 24px;
+    animation: fadeSlideIn 0.4s ease;
+  }
+  .agent-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .agent-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .agent-name { font-size: 14px; font-weight: 600; }
+  .agent-badge {
+    margin-left: 8px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+  .agent-body {
+    background: #0a0a14;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 14px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    min-height: 48px;
+  }
+  .agent-meta { margin-top: 12px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .agent-source {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #64748b;
+  }
+  .status-badge {
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 100px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── Pipeline ── */
+  .pipeline-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 24px 0;
+  }
+  .pipeline-step-wrap { display: flex; align-items: center; }
+  .pipeline-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    min-width: 100px;
+  }
+  .pipeline-step.active { transform: scale(1.05); }
+  .pipeline-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; background: #1e1e2e; transition: all 0.4s ease;
+  }
+  .pipeline-label {
+    font-size: 12px; font-weight: 600;
+    color: #64748b; text-align: center; line-height: 1.3;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pipeline-connector {
+    width: 32px; height: 2px; background: #2a2a3e;
+    flex-shrink: 0; transition: all 0.4s ease;
+  }
+  .pipeline-detail {
+    margin-top: 20px; padding: 16px 20px;
+    background: #13131f; border-radius: 12px;
+  }
+  .pipeline-detail p { color: #94a3b8; font-size: 14px; margin: 0; line-height: 1.6; }
+  .pipeline-detail .step-num { font-weight: 700; }
+
+  /* ── Flow diagrams ── */
+  .flow-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .flow-chip {
+    padding: 10px 18px; border-radius: 10px;
+    font-size: 13px; font-family: 'JetBrains Mono', monospace;
+  }
+  .flow-chip--stale { background: #1e1e2e; color: #f59e0b; }
+  .flow-chip--rag {
+    background: #10b98115; color: #10b981;
+    border: 1px solid #10b98122; font-size: 12px; padding: 10px 14px;
+  }
+  .flow-arrow { color: #333; }
+  .flow-caption { color: #94a3b8; font-size: 13px; margin: 12px 0 0; text-align: center; }
+
+  /* ── Reveal / truth ── */
+  .reveal-card {
+    background: linear-gradient(135deg, #6366f108, #d946ef08);
+    border-radius: 16px; padding: 24px;
+    border: 1px solid #6366f133;
+    animation: fadeSlideIn 0.4s ease;
+  }
+  .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .comparison-box { padding: 12px; border-radius: 10px; }
+  .comparison-box--stale { background: #ef444411; border: 1px solid #ef444422; }
+  .comparison-box--rag   { background: #10b98111; border: 1px solid #10b98122; }
+  .comparison-box__title {
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    font-weight: 600; margin: 0 0 4px;
+  }
+  .comparison-box__text { font-size: 13px; color: #94a3b8; margin: 0; }
+
+  /* ── Header row ── */
+  .top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px; flex-wrap: wrap; gap: 12px;
+  }
+  .results-col { display: flex; flex-direction: column; gap: 20px; }
+
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 500px) {
+    .comparison-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ INTRO VIEW ═══════════════════════ -->
+<div id="view-intro" class="container container--narrow">
+  <div style="text-align:center; margin-bottom:60px">
+    <div class="tag">Interactive Lesson</div>
+    <h1 class="hero-title">Why AI Agents<br>Go Stale</h1>
+    <p class="subtitle">And how <span class="hl">Retrieval-Augmented Generation</span> keeps them fresh.</p>
+  </div>
+
+  <div class="card">
+    <h3 class="label" style="color:#f59e0b">⚠ The Problem</h3>
+    <p style="color:#cbd5e1; line-height:1.8; margin-bottom:16px; font-size:15px">
+      LLMs are trained on data up to a <strong style="color:#f59e0b">cutoff date</strong>. After that, they're working from a frozen snapshot. When your business rules shift, products change, or staff rotate — the agent doesn't know. It gives confident answers that are <em>completely wrong</em>.
+    </p>
+    <p style="color:#94a3b8; line-height:1.8; font-size:15px">
+      Static knowledge bases make this worse. If your agent pulls from documents that haven't been refreshed, every answer is based on outdated information.
+    </p>
+  </div>
+
+  <div class="card" style="margin-bottom:40px">
+    <h3 class="label" style="color:#10b981">✦ The Fix: RAG</h3>
+    <p style="color:#cbd5e1; line-height:1.8; margin-bottom:16px; font-size:15px">
+      <strong style="color:#10b981">Retrieval-Augmented Generation</strong> lets your agent pull from external, updatable sources at query time — instead of relying solely on baked-in training data.
+    </p>
+    <p style="color:#94a3b8; line-height:1.8; font-size:15px">
+      Think of it as giving the agent a live reference library instead of making it rely on memory alone. The agent retrieves relevant, fresh documents and uses them to generate grounded answers.
+    </p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn--primary" onclick="showView('demo')">Try the Interactive Demo →</button>
+    <button class="btn btn--outline" onclick="showView('pipeline')">Explore the RAG Pipeline</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PIPELINE VIEW ═══════════════════════ -->
+<div id="view-pipeline" class="container hidden">
+  <button class="btn--back" onclick="showView('intro')">← Back to Overview</button>
+  <h2 class="section-title" style="margin-top:16px">The RAG Pipeline</h2>
+  <p class="section-sub">Click each step to understand how RAG works under the hood.</p>
+
+  <div id="pipeline-interactive"></div>
+
+  <div style="display:flex; flex-direction:column; gap:16px; margin-top:32px">
+    <!-- Without RAG -->
+    <div class="card card--tight" style="border-color:#1e1e2e">
+      <h3 class="label label--sm" style="color:#f59e0b">Without RAG (Traditional LLM)</h3>
+      <div class="flow-row">
+        <div class="flow-chip flow-chip--stale">💬 Query</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--stale">🧠 LLM (stale data)</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--stale">📤 Answer</div>
+      </div>
+      <p class="flow-caption">The LLM only uses its training data — which may be months or years old.</p>
+    </div>
+    <!-- With RAG -->
+    <div class="card card--tight" style="border-color:#10b98133">
+      <h3 class="label label--sm" style="color:#10b981">With RAG</h3>
+      <div class="flow-row" style="gap:8px">
+        <div class="flow-chip flow-chip--rag">💬 Query</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--rag">🔢 Embed</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--rag">🔍 Retrieve</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--rag">📎 Augment</div><span class="flow-arrow">→</span>
+        <div class="flow-chip flow-chip--rag">✨ Generate</div>
+      </div>
+      <p class="flow-caption">Fresh documents are retrieved and injected into the prompt before the LLM generates.</p>
+    </div>
+    <!-- Agentic RAG -->
+    <div class="card card--tight">
+      <h3 class="label label--sm" style="color:#d946ef">Agentic RAG (Advanced)</h3>
+      <p style="color:#cbd5e1; font-size:14px; line-height:1.7">
+        The next evolution: agents that can <strong style="color:#d946ef">break complex questions into sub-queries</strong>, validate their own outputs, and dynamically choose between searching internal docs, databases, or the web. They can even collaborate with other specialized agents — each handling different knowledge domains.
+      </p>
+    </div>
+  </div>
+
+  <div style="margin-top:32px; text-align:center">
+    <button class="btn btn--primary" style="font-size:15px; padding:14px 28px" onclick="showView('demo')">Try the Before &amp; After Demo →</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════ DEMO VIEW ═══════════════════════ -->
+<div id="view-demo" class="container hidden">
+  <div class="top-bar">
+    <button class="btn--back" onclick="showView('intro')">← Back</button>
+    <div class="tag tag--small">Before &amp; After RAG</div>
+  </div>
+
+  <h2 style="font-size:24px; font-family:'Space Mono',monospace; font-weight:700; margin:0 0 8px; color:#e2e8f0">Ask the Agent</h2>
+  <p style="color:#64748b; margin:0 0 24px; font-size:14px">Pick a question and see how a stale agent vs. a RAG-powered agent responds.</p>
+
+  <div class="q-grid" id="question-grid"></div>
+
+  <div class="results-col" id="results-area"></div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────
+const QUESTIONS = [
+  {
+    id:1, category:"Pricing", question:"What is the price of the Pro Plan?",
+    staleAnswer:{text:"The Pro Plan is $29/month. It includes 10 team members, 50GB storage, and priority email support.",source:"Training data (6 months ago)"},
+    ragAnswer:{text:"The Pro Plan is now $39/month (updated last week). It includes 25 team members, 100GB storage, priority support, and the new AI Assistant feature.",source:"Live pricing API → last updated 2 hours ago"},
+    realAnswer:"The Pro Plan was updated to $39/month with expanded features 3 weeks ago."
+  },
+  {
+    id:2, category:"Policy", question:"What's our company's return policy?",
+    staleAnswer:{text:"Our return policy allows returns within 30 days of purchase with a receipt. Items must be in original packaging.",source:"Training data (6 months ago)"},
+    ragAnswer:{text:"As of January 2026, our return policy allows returns within 60 days. Digital products now have a 14-day refund window. Receipt or order confirmation email accepted.",source:"Company policy DB → version 4.2, updated Jan 15, 2026"},
+    realAnswer:"The return window was extended to 60 days in January 2026, and digital refund policies were added."
+  },
+  {
+    id:3, category:"People", question:"Who is the current Head of Engineering?",
+    staleAnswer:{text:"The Head of Engineering is Sarah Chen. She's been in the role since 2023 and leads a team of 45 engineers.",source:"Training data (6 months ago)"},
+    ragAnswer:{text:"The current Head of Engineering is Marcus Rivera, who took over the role on December 1, 2025. The engineering team has grown to 62 members under the new AI-first initiative.",source:"HR Database → org chart updated Dec 1, 2025"},
+    realAnswer:"Sarah Chen moved to CTO at a startup. Marcus Rivera was promoted to Head of Engineering in December 2025."
+  },
+  {
+    id:4, category:"Product", question:"What integrations does our platform support?",
+    staleAnswer:{text:"We support integrations with Slack, Jira, GitHub, and Google Workspace. You can set them up in Settings > Integrations.",source:"Training data (6 months ago)"},
+    ragAnswer:{text:"We currently support 12 integrations: Slack, Jira, GitHub, Google Workspace, Linear, Notion, Figma, Salesforce, HubSpot, Zapier, Microsoft Teams, and the new AI Copilot API (beta). Setup is in Settings > Integrations > Marketplace.",source:"Product docs → v3.8 release notes, Feb 1, 2026"},
+    realAnswer:"8 new integrations were added in the last 6 months, including the AI Copilot API in the latest release."
+  }
+];
+
+const PIPELINE_STEPS = [
+  {id:1,title:"User Query",icon:"💬",detail:"The user's natural language question enters the system.",color:"#6366f1"},
+  {id:2,title:"Embed Query",icon:"🔢",detail:"The question is converted into a numerical vector (embedding) that captures its semantic meaning.",color:"#8b5cf6"},
+  {id:3,title:"Retrieve",icon:"🔍",detail:"The vector is used to find the most relevant documents from an up-to-date vector database.",color:"#a855f7"},
+  {id:4,title:"Augment",icon:"📎",detail:"Retrieved documents are injected into the LLM prompt as fresh context alongside the original question.",color:"#c084fc"},
+  {id:5,title:"Generate",icon:"✨",detail:"The LLM generates a response grounded in the retrieved, current information — not just its training data.",color:"#d946ef"}
+];
+
+const CAT_COLORS = { Pricing:"#f59e0b", Policy:"#3b82f6", People:"#10b981", Product:"#f43f5e" };
+
+// ── State ─────────────────────────────────────────────
+let state = { view:"intro", selectedQ:null, pipelineStep:0 };
+
+// ── View switching ────────────────────────────────────
+function showView(name) {
+  document.getElementById("view-intro").classList.toggle("hidden", name !== "intro");
+  document.getElementById("view-pipeline").classList.toggle("hidden", name !== "pipeline");
+  document.getElementById("view-demo").classList.toggle("hidden", name !== "demo");
+  state.view = name;
+  window.scrollTo(0, 0);
+  if (name === "pipeline") renderPipeline(0);
+  if (name === "demo") renderQuestionGrid();
+}
+
+// ── Typewriter ────────────────────────────────────────
+function typewrite(el, text, speed, cb) {
+  let i = 0;
+  el.textContent = "";
+  const timer = setInterval(() => {
+    if (i < text.length) { el.textContent = text.slice(0, ++i); }
+    else { clearInterval(timer); if (cb) cb(); }
+  }, speed);
+  return timer;
+}
+
+// ── Pipeline renderer ─────────────────────────────────
+function renderPipeline(active, container) {
+  const target = container || document.getElementById("pipeline-interactive");
+  let html = '<div class="pipeline-row">';
+  PIPELINE_STEPS.forEach((s, i) => {
+    const reached = active >= s.id;
+    const isCurrent = active === s.id;
+    html += `<div class="pipeline-step-wrap">
+      <div class="pipeline-step${isCurrent ? ' active' : ''}" onclick="${container ? '' : `setPipelineStep(${s.id})`}"
+        style="background:${reached ? `linear-gradient(135deg,${s.color}18,${s.color}08)` : 'transparent'};
+               border-color:${isCurrent ? s.color : 'transparent'}">
+        <div class="pipeline-icon" style="background:${reached ? `linear-gradient(135deg,${s.color},${s.color}cc)` : '#1e1e2e'};
+             box-shadow:${reached ? `0 4px 20px ${s.color}44` : 'none'}">
+          ${s.icon}
+        </div>
+        <span class="pipeline-label" style="color:${reached ? '#e2e8f0' : '#64748b'}">${s.title}</span>
+      </div>`;
+    if (i < PIPELINE_STEPS.length - 1) {
+      const next = PIPELINE_STEPS[i + 1];
+      html += `<div class="pipeline-connector" style="background:${active > s.id ? `linear-gradient(90deg,${s.color},${next.color})` : '#2a2a3e'}"></div>`;
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  if (active > 0) {
+    const step = PIPELINE_STEPS[active - 1];
+    html += `<div class="pipeline-detail" style="border:1px solid ${step.color}33">
+      <p><span class="step-num" style="color:${step.color}">Step ${active}:</span> ${step.detail}</p>
+    </div>`;
+  }
+  target.innerHTML = html;
+}
+function setPipelineStep(n) { state.pipelineStep = n; renderPipeline(n); }
+
+// ── Question grid ─────────────────────────────────────
+function renderQuestionGrid() {
+  const grid = document.getElementById("question-grid");
+  grid.innerHTML = "";
+  QUESTIONS.forEach(q => {
+    const card = document.createElement("button");
+    card.className = "q-card";
+    card.setAttribute("data-qid", q.id);
+    card.innerHTML = `<span class="q-card__cat" style="color:${CAT_COLORS[q.category]}">${q.category}</span>
+      <p class="q-card__text">${q.question}</p>`;
+    card.onclick = () => askQuestion(q);
+    grid.appendChild(card);
+  });
+}
+
+// ── Ask flow ──────────────────────────────────────────
+function askQuestion(q) {
+  state.selectedQ = q;
+  // highlight active card
+  document.querySelectorAll(".q-card").forEach(c => {
+    const active = +c.dataset.qid === q.id;
+    c.classList.toggle("active", active);
+    c.style.borderColor = active ? CAT_COLORS[q.category] : "#1e1e2e";
+  });
+
+  const area = document.getElementById("results-area");
+  area.innerHTML = "";
+
+  // show stale card after delay
+  setTimeout(() => {
+    const staleCard = document.createElement("div");
+    staleCard.className = "agent-card";
+    staleCard.style.border = "1px solid #f59e0b33";
+    staleCard.innerHTML = `
+      <div class="agent-header">
+        <div class="agent-icon" style="background:linear-gradient(135deg,#f59e0b33,#f59e0b11)">🤖</div>
+        <div>
+          <span class="agent-name" style="color:#f59e0b">Stale Agent</span>
+          <span class="agent-badge" style="background:#ef444422;color:#f87171">NO RAG</span>
+        </div>
+      </div>
+      <div class="agent-body" style="border-left:3px solid #f59e0b44" id="stale-text"></div>
+      <div class="agent-meta">
+        <span class="agent-source">📁 ${q.staleAnswer.source}</span>
+        <span class="status-badge" style="background:#ef444418;color:#f87171">✗ OUTDATED</span>
+      </div>
+      <div id="stale-action"></div>`;
+    area.appendChild(staleCard);
+
+    typewrite(document.getElementById("stale-text"), q.staleAnswer.text, 18, () => {
+      const actionArea = document.getElementById("stale-action");
+      const btn = document.createElement("button");
+      btn.className = "btn btn--green";
+      btn.textContent = "Now ask with RAG enabled →";
+      btn.onclick = () => startRAGPipeline(q);
+      actionArea.appendChild(btn);
+    });
+  }, 600);
+}
+
+function startRAGPipeline(q) {
+  // remove the "ask with RAG" button
+  const actionArea = document.getElementById("stale-action");
+  if (actionArea) actionArea.innerHTML = "";
+
+  const area = document.getElementById("results-area");
+
+  // pipeline animation card
+  const pipeCard = document.createElement("div");
+  pipeCard.className = "agent-card";
+  pipeCard.style.border = "1px solid #6366f133";
+  pipeCard.innerHTML = `
+    <p style="font-size:12px;font-family:'JetBrains Mono',monospace;color:#818cf8;margin:0 0 8px;font-weight:600;letter-spacing:1px;text-transform:uppercase">
+      RAG Pipeline Running...
+    </p>
+    <div id="demo-pipeline"></div>`;
+  area.appendChild(pipeCard);
+
+  let step = 1;
+  renderPipeline(step, document.getElementById("demo-pipeline"));
+
+  const interval = setInterval(() => {
+    step++;
+    if (step <= 5) {
+      renderPipeline(step, document.getElementById("demo-pipeline"));
+    } else {
+      clearInterval(interval);
+      // remove pipeline card, show RAG answer
+      pipeCard.remove();
+      showRAGAnswer(q);
+    }
+  }, 700);
+}
+
+function showRAGAnswer(q) {
+  const area = document.getElementById("results-area");
+
+  const ragCard = document.createElement("div");
+  ragCard.className = "agent-card";
+  ragCard.style.border = "1px solid #10b98133";
+  ragCard.innerHTML = `
+    <div class="agent-header">
+      <div class="agent-icon" style="background:linear-gradient(135deg,#10b98133,#10b98111)">🧠</div>
+      <div>
+        <span class="agent-name" style="color:#10b981">RAG-Powered Agent</span>
+        <span class="agent-badge" style="background:#10b98122;color:#34d399">RAG ENABLED</span>
+      </div>
+    </div>
+    <div class="agent-body" style="border-left:3px solid #10b98144" id="rag-text"></div>
+    <div class="agent-meta">
+      <span class="agent-source">📡 ${q.ragAnswer.source}</span>
+      <span class="status-badge" style="background:#10b98118;color:#34d399">✓ CURRENT</span>
+    </div>
+    <div id="rag-action"></div>`;
+  area.appendChild(ragCard);
+
+  typewrite(document.getElementById("rag-text"), q.ragAnswer.text, 18, () => {
+    const btn = document.createElement("button");
+    btn.className = "btn btn--reveal";
+    btn.textContent = "Reveal what actually changed 🔎";
+    btn.onclick = () => showReveal(q);
+    document.getElementById("rag-action").appendChild(btn);
+  });
+}
+
+function showReveal(q) {
+  // remove reveal button
+  const actionArea = document.getElementById("rag-action");
+  if (actionArea) actionArea.innerHTML = "";
+
+  const area = document.getElementById("results-area");
+  const reveal = document.createElement("div");
+  reveal.className = "reveal-card";
+  reveal.innerHTML = `
+    <h4 class="label label--sm" style="color:#a78bfa; margin-bottom:12px">💡 Ground Truth</h4>
+    <p style="color:#e2e8f0; font-size:15px; line-height:1.7; margin-bottom:16px">${q.realAnswer}</p>
+    <div class="comparison-grid">
+      <div class="comparison-box comparison-box--stale">
+        <p class="comparison-box__title" style="color:#f87171">Stale Agent</p>
+        <p class="comparison-box__text">Gave confidently wrong info from 6-month-old training data. A user could make decisions on bad information.</p>
+      </div>
+      <div class="comparison-box comparison-box--rag">
+        <p class="comparison-box__title" style="color:#34d399">RAG Agent</p>
+        <p class="comparison-box__text">Retrieved live data, cited its source and freshness. The answer reflects actual current state.</p>
+      </div>
+    </div>`;
+  area.appendChild(reveal);
+}
+
+// ── Init ──────────────────────────────────────────────
+showView("intro");
+</script>
+</body>
+</html>
