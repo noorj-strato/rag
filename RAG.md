@@ -56,10 +56,6 @@ embedded_chunks = [
 
 If you feed a 20-page document as one embedding, the vector becomes a vague average of everything in it. Smaller chunks mean more precise retrieval. The `chunk_overlap` prevents you from slicing a sentence in half and losing meaning.
 
-### TypeScript Equivalent
-
-Use the `openai` npm package — the embedding call is nearly identical. For splitting, `langchain` has a JS version, or you can use `@xenova/transformers` for local embeddings.
-
 ---
 
 ## Step 2: Store in a Vector Database
@@ -258,19 +254,3 @@ When you see patterns — certain question types always get overridden, certain 
 
 ---
 
-## Dependencies
-
-```bash
-pip install openai langchain chromadb schedule
-```
-
----
-
-## Next Steps
-
-Once basic RAG is working, consider these improvements:
-
-- **Agentic RAG** — the agent decides *where* to search based on the query type (see AGENTIC-RAG.md)
-- **Hybrid search** — combine vector similarity with keyword search (BM25) for better recall
-- **Query routing** — use a classifier to send pricing questions to one knowledge base and policy questions to another
-- **Re-ranking** — use a cross-encoder model to re-score retrieved chunks for higher precision
