@@ -544,16 +544,3 @@ The progression from basic RAG to Agentic RAG:
 The thread connecting all of it remains the same principle: **an AI agent is only as good as its information**. The architecture has gotten more sophisticated, but the automated refresh processes, feedback loops, and freshness tracking from the basic RAG implementation still underpin everything. Without those, even the most sophisticated agentic system will confidently serve outdated answers.
 
 ---
-
-## Dependencies
-
-```bash
-pip install anthropic chromadb
-```
-
-For web search in production, add one of:
-
-```bash
-pip install tavily-python   # Tavily (built for AI agents)
-pip install serpapi          # SerpAPI (Google results)
-```
